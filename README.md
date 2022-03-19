@@ -1,4 +1,4 @@
-# Instagram Saved Vidoes Downloader
+# Instagram Saved Videos Downloader
 
 To download all your saved vidoes from your Instagram account.
 
