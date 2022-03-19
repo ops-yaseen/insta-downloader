@@ -1,4 +1,4 @@
-# ops-insta-downloader
+# Instagram Saved Vidoes Downloader
 
 To download all your saved vidoes from your Instagram account.
 
