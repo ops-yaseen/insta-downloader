@@ -1,5 +1,6 @@
 import os
 import re
+import numpy
 import tkinter.messagebox
 
 import requests
@@ -11,21 +12,25 @@ from tkinter.ttk import Style
 from PIL import Image, ImageTk
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.firefox.options import Options
 from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 
 CHROME_DRIVER = "drivers/chromedriver"
+FF_DRIVER = 'drivers/geckodriver'
 URL = 'https://www.instagram.com/accounts/login/'
-DOWNLOAD_DIR = os.path.expanduser('~').replace('\\', '/') + '/Downloads/insta_my_saveds_videos'
+EMAIL_ID = 'wolverinelog7@gmail.com'
+DOWNLOAD_DIR = os.path.expanduser('~').replace('\\', '/') + '/Videos/temp_dir'
 
 
 class InstaBot:
-    def __init__(self, user_name, user_password, chrome_driver_path):
+    def __init__(self, user_name, user_password, driver_path):
         self.user_name = user_name
         self.user_password = user_password
         self.options = Options()
-        self.options.headless = True
-        self.browser = webdriver.Chrome(options=self.options, executable_path=chrome_driver_path)
+        self.options.headless = False
+        # self.browser = webdriver.Chrome(options=self.options, executable_path=driver_path)
+        self.browser = webdriver.Firefox(options=self.options, executable_path=driver_path)
 
     def login(self):
         self.browser.get(URL)
@@ -67,41 +72,57 @@ class InstaBot:
     def exit(self):
         self.browser.quit()
 
-    def go_to_saved_items(self):
-        try:
-            click_profile = self.browser.find_element_by_xpath('/html/body/div[1]/section/nav/div[2]/div/div/div['
-                                                               '3]/div/div[6]/span')
-        except NoSuchElementException:
-            quit('Unable to go to profile')
-            self.exit()
-        else:
-            click_profile.click()
-            self.browser.implicitly_wait(time_to_wait=3)
-        try:
-            click_saved = self.browser.find_element_by_xpath('/html/body/div[1]/section/nav/div[2]/div/div/div['
-                                                             '3]/div/div[6]/div[2]/div[2]/div[2]/a[2]/div/div['
-                                                             '2]/div/div/div/div')
-        except NoSuchElementException:
-            quit('Unable to go to saved items')
-            self.exit()
-        else:
-            click_saved.click()
+    # def go_to_saved_items(self):
+    #     try:
+    #         # click_profile = self.browser.find_element_by_xpath('/html/body/div[1]/div/div/div/div[1]/div/div/div/div['
+    #         #                                                    '1]/div[1]/section/nav/div[2]/div/div/div[2]/div/div['
+    #         #                                                    '6]/div[1]/span/img')
+    #         click_profile = self.browser.find_element_by_xpath('/html/body/div[1]/div/div/div/div[1]/div/div/div/div['
+    #                                                            '1]/section/nav/div[2]/div/div/div[2]/div/div[6]/div['
+    #                                                            '1]/span/img')
+    #
+    #     except NoSuchElementException:
+    #         quit('Unable to go to profile')
+    #         self.exit()
+    #     else:
+    #         click_profile.click()
+    #         self.browser.implicitly_wait(time_to_wait=3)
+    #     try:
+    #         # click_saved = self.browser.find_element_by_xpath('/html/body/div[1]/div/div/div/div[1]/div/div/div/div['
+    #         #                                                  '1]/div[1]/section/nav/div[2]/div/div/div[2]/div/div['
+    #         #                                                  '6]/div[2]/div[2]/div[2]/a[2]/div/div[2]/div/div/div/div')
+    #         click_saved = self.browser.find_element_by_xpath('/html/body/div[1]/div/div/div/div[1]/div/div/div/div['
+    #                                                          '1]/section/nav/div[2]/div/div/div[2]/div/div[6]/div['
+    #                                                          '2]/div/div[2]/div[2]/a/div/div[2]/div/div/div/div')
+    #     except NoSuchElementException:
+    #         quit('Unable to go to saved items')
+    #         self.exit()
+    #     else:
+    #         click_saved.click()
+    #     try:
+    #         self.browser.get('https://www.instagram.com/wollog8/saved/all-posts/')
+    #     except NoSuchElementException:
+    #         quit('Unable to go to all saved posts')
 
     @property
     def get_saved_link(self):
+        time.sleep(8)
         last_height = self.browser.execute_script("return document.body.scrollHeight")
         video_links = []
         while True:
             self.browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            self.browser.implicitly_wait(4)
             time.sleep(2)
             links = []
-            for element in self.browser.find_elements_by_class_name('_bz0w'):
+            for element in self.browser.find_elements_by_class_name('_aanf'):
                 links.append(element.find_elements_by_tag_name('a'))
             for link in links:
                 if len(link) != 0:
                     video_link = link[0].get_attribute('href')
                     video_links.append(video_link)
 
+            self.browser.implicitly_wait(4)
+            time.sleep(3)
             new_height = self.browser.execute_script("return document.body.scrollHeight")
             if new_height == last_height:
                 break
@@ -123,20 +144,29 @@ class InstaBot:
 
     def download_saved_videos(self):
         start_time = time.perf_counter()
-        self.go_to_saved_items()
+        self.browser.get('https://www.instagram.com/wollog8/saved/all-posts/')
+        # self.go_to_saved_items()
         videos = self.get_saved_link
 
         if not os.path.exists(DOWNLOAD_DIR):
             os.mkdir(DOWNLOAD_DIR)
         os.chdir(DOWNLOAD_DIR)
 
+        with open('vid_links.txt', 'a') as file:
+            for video in videos:
+                file.write(video + '\n')
+
         for video in videos:
+            video = video.replace('/p/', '/reel/')
             self.browser.get(video)
             time.sleep(3)
             video_page_source = self.browser.page_source
             soup = BeautifulSoup(video_page_source, 'lxml')
+            # print(video_page_source)
             try:
-                video_url = re.findall('"video_url":"([^"]+)"', video_page_source)[0].replace("\\u0026", "&")
+                # video_url = re.findall('"video_url":"([^"]+)"', video_page_source)[0].replace("\\u0026", "&")
+                video_url = self.browser.find_element_by_css_selector("video[type='video/mp4']").get_attribute('src')
+                # print(f'Try: {video_url}')
             except IndexError:
                 video_url = None
                 page_scripts = soup.find_all('script')
@@ -148,10 +178,18 @@ class InstaBot:
                             if '.mp4?efg=' in element:
                                 video_url = element.replace('"url":', '').strip('"').replace('\\u0026', '&')
                                 break
-            video_title = video_url.split('/')[-1].split('?')[0]
-            r = requests.get(video_url)
-            with open(video_title, 'wb') as video_file:
-                video_file.write(r.content)
+                print(f'Except: {video_url}')
+            except:
+                continue
+
+            try:
+                video_title = video_url.split('/')[-1].split('?')[0]
+            except AttributeError:
+                pass
+            else:
+                r = requests.get(video_url)
+                with open(video_title, 'wb') as video_file:
+                    video_file.write(r.content)
 
         end_time = time.perf_counter()
         time_taken_in_seconds = round(end_time - start_time)
@@ -172,7 +210,7 @@ def main():
         tkinter.messagebox.showwarning(title='Warning!', message='UserID or Password Not Provided')
     else:
         user_password_box.delete(0, END)
-        my_profile = InstaBot(user_name, user_password, CHROME_DRIVER)
+        my_profile = InstaBot(user_name, user_password, FF_DRIVER)
         my_profile.login()
         my_profile.download_saved_videos()
         my_profile.exit()
@@ -209,10 +247,12 @@ password_label.grid(column=0, row=3)
 
 user_name_box = ttk.Entry(width=30)
 user_name_box.bind("<Button-1>", on_click)
-user_name_box.grid(column=1, row=2, pady=10)
+# user_name_box.insert(0, EMAIL_ID)
 user_name_box.focus()
+user_name_box.grid(column=1, row=2, pady=10)
 user_password_box = ttk.Entry(width=30, show='*')
 user_password_box.bind("<Button-1>", on_click)
+# user_password_box.focus()
 user_password_box.grid(column=1, row=3, pady=10)
 
 style = Style()
