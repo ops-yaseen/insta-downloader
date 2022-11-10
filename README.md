@@ -16,3 +16,5 @@ Enter your Credentials,
 
 
 click on 'Login', It will automatically download all your saved videos under Downloads\insta_videos
+
+Note: Kindly download the web driver as per your browser and its version
